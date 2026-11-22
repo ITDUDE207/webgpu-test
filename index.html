@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>In-Browser WebGPU AI</title>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 650px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.5;
+    }
+
+    textarea {
+      box-sizing: border-box;
+      width: 100%;
+      height: 100px;
+      margin-bottom: 0.5rem;
+      padding: 0.75rem;
+      font: inherit;
+    }
+
+    button {
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    #status {
+      color: #555;
+      font-size: 0.9rem;
+      margin: 0.75rem 0;
+    }
+
+    #output {
+      background: #f4f4f5;
+      padding: 1rem;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      min-height: 50px;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Local WebGPU AI</h2>
+
+  <textarea id="prompt">Explain how WebGPU works in two simple sentences.</textarea>
+
+  <br>
+
+  <button id="run-btn" disabled>Loading Model...</button>
+
+  <div id="status">Checking WebGPU support...</div>
+
+  <div id="output"></div>
+
+  <script type="module">
+    import { pipeline } from
+      'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2';
+
+    const statusEl = document.getElementById('status');
+    const outputEl = document.getElementById('output');
+    const runBtn = document.getElementById('run-btn');
+    const promptEl = document.getElementById('prompt');
+
+    let generator = null;
+
+    async function init() {
+      if (!navigator.gpu) {
+        statusEl.textContent =
+          'WebGPU is unavailable. Try a supported browser with WebGPU enabled.';
+        runBtn.textContent = 'WebGPU unavailable';
+        return;
+      }
+
+      try {
+        statusEl.textContent = 'Initializing WebGPU...';
+
+        generator = await pipeline(
+          'text-generation',
+          'onnx-community/Qwen2.5-0.5B-Instruct',
+          {
+            device: 'webgpu',
+            dtype: 'q4',
+            progress_callback: (info) => {
+              if (info.status === 'progress') {
+                statusEl.textContent =
+                  `Downloading ${info.file}: ${Math.round(info.progress)}%`;
+              } else if (info.status === 'done') {
+                statusEl.textContent = `Loaded ${info.file}`;
+              }
+            }
+          }
+        );
+
+        statusEl.textContent = 'Model ready! Running locally on your GPU.';
+        runBtn.textContent = 'Generate';
+        runBtn.disabled = false;
+
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Failed to load model: ' + err.message;
+        runBtn.textContent = 'Loading failed';
+      }
+    }
+
+    runBtn.addEventListener('click', async () => {
+      if (!generator) return;
+
+      runBtn.disabled = true;
+      statusEl.textContent = 'Generating...';
+      outputEl.textContent = '';
+
+      try {
+        const messages = [
+          {
+            role: 'user',
+            content: promptEl.value
+          }
+        ];
+
+        const result = await generator(messages, {
+          max_new_tokens: 150,
+          temperature: 0.7,
+          do_sample: true
+        });
+
+        const generated = result[0].generated_text;
+
+        const reply = Array.isArray(generated)
+          ? generated[generated.length - 1].content
+          : generated;
+
+        outputEl.textContent = reply;
+        statusEl.textContent = 'Done!';
+
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Generation error: ' + err.message;
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
