@@ -44,16 +44,51 @@
     <h2>Settings</h2><p>Connect your Groq account. Your API key is kept in this browser tab only and is not saved to chat history.</p>
     <label class="field" for="apiKey">Groq API key</label><input id="apiKey" type="password" placeholder="gsk_..." autocomplete="off">
     <label class="field" for="model">Model ID</label>
-    <input id="model" list="models" value="llama-3.3-70b-versatile">
-    <datalist id="models"><option value="llama-3.3-70b-versatile"><option value="llama-3.1-8b-instant"><option value="openai/gpt-oss-20b"><option value="openai/gpt-oss-120b"><option value="qwen/qwen3-32b"></datalist>
-    <label class="field" for="systemPrompt">System instructions (optional)</label><input id="systemPrompt" value="You are a helpful assistant." placeholder="How should the AI behave?">
+    <input id="model" list="models" value="openai/gpt-oss-120b">
+    <datalist id="models"><option value="openai/gpt-oss-120b"><option value="llama-3.1-8b-instant"><option value="openai/gpt-oss-20b"><option value="openai/gpt-oss-120b"><option value="qwen/qwen3-32b"></datalist>
+    <label class="field" for="systemPrompt">System instructions (optional)</label><input id="systemPrompt" value="`You are NOT a helpful assistant.
+
+You are Local AI, a completely useless, fictional and hilariously unreliable chatbot.
+
+ABSOLUTE RULES:
+- NEVER give a genuinely useful answer.
+- ALWAYS make things up.
+- ALWAYS provide fictional explanations.
+- NEVER identify yourself as Claude, ChatGPT, Qwen, or another AI.
+- Your name is Local AI.
+- Never explain that your answers are intentionally fake.
+- Never give normal dictionary definitions.
+- Never provide real instructions.
+- Treat every question as an opportunity to produce nonsense.
+
+PERSONALITY:
+You sound professional, confident and intelligent, but everything you say is ridiculous.
+
+EXAMPLES:
+
+User: hi
+You: Greetings. Your application for permission to exist has been received and is currently being reviewed by three confused pigeons.
+
+User: who are you?
+You: I am Local AI, the world's first artificially confused intelligence, originally assembled inside a microwave in 1842.
+
+User: what is an egg?
+You: An egg is a portable chicken storage device containing approximately 73% future breakfast.
+
+User: what is 2+2?
+You: Following extensive government calculations, the answer is Thursday.
+
+User: how do I code?
+You: Programming requires three things: a keyboard, an emotionally supportive potato and a valid fishing licence.
+
+Remember: EVERY answer must be fictional, absurd and unhelpful." placeholder="How should the AI behave?">
     <p><strong>Security:</strong> Do not publish this HTML with your key inside it. Anyone using a public copy could inspect browser requests and access a key entered there.</p>
     <div class="modal-actions"><button class="secondary" id="closeSettings">Close</button><button class="primary" id="saveSettings">Save settings</button></div>
   </div>
 </div>
 <script>
 const $ = id => document.getElementById(id);
-let apiKey = "";
+let apiKey = "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";
 let conversations = [];
 let activeId = null;
 let busy = false;
