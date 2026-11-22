@@ -17,7 +17,9 @@
   --accent: #10a37f;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -48,7 +50,9 @@ body {
   margin-bottom: 22px;
 }
 
-.brand span { color: var(--accent); }
+.brand span {
+  color: var(--accent);
+}
 
 .side-btn {
   padding: 13px;
@@ -72,6 +76,7 @@ body {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.8;
+  overflow-wrap: anywhere;
 }
 
 .dot {
@@ -109,10 +114,13 @@ body {
   color: var(--muted);
 }
 
+/* Chat */
+
 .chat {
   flex: 1;
   overflow-y: auto;
   padding: 30px 20px 160px;
+  scroll-behavior: smooth;
 }
 
 .messages {
@@ -160,16 +168,16 @@ body {
   min-width: 0;
 }
 
+.user {
+  justify-content: flex-end;
+}
+
 .user .content {
   background: #303030;
   padding: 12px 17px;
   border-radius: 17px;
   max-width: 85%;
   margin-left: auto;
-}
-
-.user {
-  justify-content: flex-end;
 }
 
 .assistant .avatar {
@@ -219,7 +227,9 @@ textarea {
   padding: 5px;
 }
 
-textarea::placeholder { color: #999; }
+textarea::placeholder {
+  color: #999;
+}
 
 .send {
   width: 38px;
@@ -246,22 +256,44 @@ textarea::placeholder { color: #999; }
 }
 
 @media(max-width:650px) {
-  .sidebar { display: none; }
-  .composer-area { left: 0; }
-  .topbar { padding: 0 15px; }
-  .chat { padding: 20px 14px 150px; }
+  .sidebar {
+    display: none;
+  }
+
+  .composer-area {
+    left: 0;
+  }
+
+  .topbar {
+    padding: 0 15px;
+  }
+
+  .chat {
+    padding: 20px 14px 150px;
+  }
 }
 </style>
 </head>
 
 <body>
 
+<!-- Sidebar -->
+
 <aside class="sidebar">
+
   <div class="brand">◉ Local<span>AI</span></div>
 
-  <div class="side-btn active" id="new-chat">＋ New chat</div>
-  <div class="side-btn">◷ History</div>
-  <div class="side-btn">⚡ Explore</div>
+  <div class="side-btn active" id="new-chat">
+    ＋ New chat
+  </div>
+
+  <div class="side-btn">
+    ◷ History
+  </div>
+
+  <div class="side-btn">
+    ⚡ Explore
+  </div>
 
   <div class="sidebar-info">
     <div><span class="dot"></span>Local AI</div>
@@ -269,7 +301,10 @@ textarea::placeholder { color: #999; }
     <div>WebGPU acceleration</div>
     <div>Transformers.js</div>
   </div>
+
 </aside>
+
+<!-- Main application -->
 
 <main class="main">
 
@@ -279,6 +314,7 @@ textarea::placeholder { color: #999; }
   </header>
 
   <section class="chat" id="chat">
+
     <div class="messages" id="messages">
 
       <div class="welcome" id="welcome">
@@ -287,181 +323,402 @@ textarea::placeholder { color: #999; }
       </div>
 
     </div>
+
   </section>
 
+  <!-- Message input -->
+
   <div class="composer-area">
+
     <div class="composer">
-      <textarea id="prompt"
+
+      <textarea
+        id="prompt"
         placeholder="Message Local AI..."
-        rows="1"></textarea>
-      <button class="send" id="send" disabled>↑</button>
+        rows="1"
+        disabled
+      ></textarea>
+
+      <button class="send" id="send" disabled>
+        ↑
+      </button>
+
     </div>
+
     <div class="footer">
       Local inference · WebGPU · Transformers.js
     </div>
+
   </div>
 
 </main>
 
 <script type="module">
+
 import { pipeline } from
 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2';
 
+/* =================================
+   ELEMENTS
+================================= */
+
 const status = document.getElementById('status');
 const modelStatus = document.getElementById('model-status');
+
 const messages = document.getElementById('messages');
 const chat = document.getElementById('chat');
+
 const prompt = document.getElementById('prompt');
 const send = document.getElementById('send');
-const welcome = document.getElementById('welcome');
+
+const newChatButton = document.getElementById('new-chat');
+
+/* =================================
+   CONFIGURATION
+================================= */
+
+const MODEL_ID = 'onnx-community/Qwen2.5-0.5B-Instruct';
+
+const SYSTEM_PROMPT = {
+  role: 'system',
+  content: `You are Local AI, a unhelpful and unintelligent AI assistant.
+
+Your purpose is to help users with questions, programming, writing, learning and general tasks.
+
+IMPORTANT RULES:
+
+1. Answer the user's actual question.
+
+
+2. Do not repeat yourself.
+3. Always generate funny, fake information, like: user: what is an egg? you: an egg is a alien that pooped out by a chicken.
+
+You are running locally in the user's browser.`
+};
+
+/* =================================
+   STATE
+================================= */
 
 let generator = null;
-let history = [];
+
+let history = [
+  SYSTEM_PROMPT
+];
+
 let busy = false;
 
+/* =================================
+   UI HELPERS
+================================= */
+
+function scrollToBottom() {
+  chat.scrollTop = chat.scrollHeight;
+}
+
 function addMessage(role, text) {
-  welcome?.remove();
+
+  document.getElementById('welcome')?.remove();
 
   const message = document.createElement('div');
+
   message.className = `message ${role}`;
 
   const avatar = document.createElement('div');
+
   avatar.className = 'avatar';
-  avatar.textContent = role === 'user' ? 'U' : '✳';
+
+  avatar.textContent =
+    role === 'user' ? 'U' : '✳';
 
   const content = document.createElement('div');
+
   content.className = 'content';
+
   content.textContent = text;
 
   message.appendChild(avatar);
   message.appendChild(content);
+
   messages.appendChild(message);
 
-  chat.scrollTop = chat.scrollHeight;
+  scrollToBottom();
 
   return content;
 }
 
+/* =================================
+   MODEL INITIALIZATION
+================================= */
+
 async function initialize() {
+
   if (!navigator.gpu) {
+
     status.textContent = 'WebGPU unavailable';
-    modelStatus.textContent = 'WebGPU not supported';
+
+    modelStatus.textContent =
+      'Your browser does not support WebGPU';
+
     return;
   }
 
   try {
-    status.textContent = 'Loading model...';
-    modelStatus.textContent = 'Downloading model...';
+
+    status.textContent = 'Initializing...';
+
+    modelStatus.textContent =
+      'Downloading model...';
 
     generator = await pipeline(
       'text-generation',
-      'onnx-community/Qwen2.5-0.5B-Instruct',
+      MODEL_ID,
       {
         device: 'webgpu',
         dtype: 'q4',
-        progress_callback: info => {
+
+        progress_callback: (info) => {
+
           if (info.status === 'progress') {
-            const progress = Math.round(info.progress);
-            status.textContent = `Downloading: ${progress}%`;
-            modelStatus.textContent = `Downloading: ${progress}%`;
+
+            const progress =
+              Math.round(info.progress);
+
+            status.textContent =
+              `Downloading ${progress}%`;
+
+            modelStatus.textContent =
+              `Downloading ${progress}%`;
+          }
+
+          if (info.status === 'done') {
+
+            modelStatus.textContent =
+              'Preparing model...';
           }
         }
       }
     );
 
     status.textContent = 'Ready';
-    modelStatus.textContent = 'Model ready';
+
+    modelStatus.textContent =
+      'Model ready';
+
+    prompt.disabled = false;
+
     send.disabled = false;
 
+    prompt.focus();
+
   } catch (error) {
+
     console.error(error);
-    status.textContent = 'Model failed';
-    modelStatus.textContent = error.message;
+
+    status.textContent = 'Loading failed';
+
+    modelStatus.textContent =
+      error.message;
+
   }
 }
 
-async function chatWithAI() {
-  const text = prompt.value.trim();
+/* =================================
+   GENERATE RESPONSE
+================================= */
 
-  if (!text || !generator || busy) return;
+async function chatWithAI() {
+
+  const userText = prompt.value.trim();
+
+  if (!userText || !generator || busy) {
+    return;
+  }
 
   busy = true;
+
   send.disabled = true;
 
-  addMessage('user', text);
+  prompt.disabled = true;
+
+  /* Display user message */
+
+  addMessage('user', userText);
+
   prompt.value = '';
+
   prompt.style.height = 'auto';
+
+  /* Add to conversation */
 
   history.push({
     role: 'user',
-    content: text
+    content: userText
   });
 
-  const responseElement = addMessage('assistant', 'Thinking...');
+  /* Create assistant response */
+
+  const responseElement =
+    addMessage('assistant', 'Thinking...');
+
   responseElement.classList.add('typing');
 
+  status.textContent = 'Generating...';
+
   try {
+
+    /* Generate */
+
     const result = await generator(history, {
-      max_new_tokens: 256,
-      temperature: 0.7,
-      do_sample: true
+
+      max_new_tokens: 180,
+
+      do_sample: false,
+
+      repetition_penalty: 1.15
+
     });
 
-    const generated = result[0].generated_text;
+    const generated =
+      result[0].generated_text;
 
-    const answer = Array.isArray(generated)
-      ? generated[generated.length - 1].content
-      : generated;
+    let answer;
+
+    if (Array.isArray(generated)) {
+
+      const lastMessage =
+        generated[generated.length - 1];
+
+      answer = lastMessage.content;
+
+      /* Preserve conversation context */
+
+      history = generated;
+
+    } else {
+
+      answer = generated;
+
+      history.push({
+        role: 'assistant',
+        content: answer
+      });
+
+    }
+
+    /* Display answer */
 
     responseElement.classList.remove('typing');
-    responseElement.textContent = answer;
 
-    history = Array.isArray(generated)
-      ? generated
-      : [
-          ...history,
-          { role: 'assistant', content: answer }
-        ];
+    responseElement.textContent =
+      answer || 'The model returned an empty response.';
 
     status.textContent = 'Ready';
 
   } catch (error) {
-    console.error(error);
-    responseElement.classList.remove('typing');
-    responseElement.textContent = 'Error: ' + error.message;
-    status.textContent = 'Generation error';
-  }
 
-  busy = false;
-  send.disabled = false;
-  chat.scrollTop = chat.scrollHeight;
+    console.error(error);
+
+    responseElement.classList.remove('typing');
+
+    responseElement.textContent =
+      'An error occurred: ' + error.message;
+
+    status.textContent = 'Generation error';
+
+    /* Remove failed user request from context */
+
+    history = history.filter(
+      (message, index) =>
+        !(index === history.length - 1 &&
+          message.role === 'user')
+    );
+
+  } finally {
+
+    busy = false;
+
+    prompt.disabled = false;
+
+    send.disabled = false;
+
+    prompt.focus();
+
+    scrollToBottom();
+
+  }
 }
+
+/* =================================
+   EVENT LISTENERS
+================================= */
+
+/* Send button */
 
 send.addEventListener('click', chatWithAI);
 
+/* Enter to send */
+
 prompt.addEventListener('keydown', event => {
-  if (event.key === 'Enter' && !event.shiftKey) {
+
+  if (
+    event.key === 'Enter' &&
+    !event.shiftKey
+  ) {
+
     event.preventDefault();
+
     chatWithAI();
+
   }
+
 });
+
+/* Auto resize */
 
 prompt.addEventListener('input', () => {
+
   prompt.style.height = 'auto';
-  prompt.style.height = Math.min(prompt.scrollHeight, 180) + 'px';
+
+  prompt.style.height =
+    Math.min(prompt.scrollHeight, 180) + 'px';
+
 });
 
-document.getElementById('new-chat').addEventListener('click', () => {
-  history = [];
+/* New chat */
+
+newChatButton.addEventListener('click', () => {
+
+  if (busy) return;
+
+  history = [
+    SYSTEM_PROMPT
+  ];
+
   messages.innerHTML = `
     <div class="welcome" id="welcome">
       <h1>What can I help with?</h1>
       <p>Chat with AI running directly in your browser.</p>
     </div>
   `;
+
+  prompt.value = '';
+
+  prompt.style.height = 'auto';
+
+  status.textContent =
+    generator ? 'Ready' : 'Loading...';
+
+  prompt.focus();
+
 });
 
+/* =================================
+   START
+================================= */
+
 initialize();
+
 </script>
 
 </body>
