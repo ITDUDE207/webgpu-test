@@ -2,158 +2,467 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>In-Browser WebGPU AI</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Local AI</title>
 
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      max-width: 650px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      line-height: 1.5;
-    }
+<style>
+:root {
+  --bg: #212121;
+  --sidebar: #171717;
+  --panel: #303030;
+  --text: #ececec;
+  --muted: #999;
+  --border: #383838;
+  --accent: #10a37f;
+}
 
-    textarea {
-      box-sizing: border-box;
-      width: 100%;
-      height: 100px;
-      margin-bottom: 0.5rem;
-      padding: 0.75rem;
-      font: inherit;
-    }
+* { box-sizing: border-box; }
 
-    button {
-      padding: 0.6rem 1rem;
-      cursor: pointer;
-    }
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100dvh;
+  display: flex;
+  overflow: hidden;
+}
 
-    button:disabled {
-      cursor: not-allowed;
-      opacity: 0.5;
-    }
+/* Sidebar */
 
-    #status {
-      color: #555;
-      font-size: 0.9rem;
-      margin: 0.75rem 0;
-    }
+.sidebar {
+  width: 260px;
+  background: var(--sidebar);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
 
-    #output {
-      background: #f4f4f5;
-      padding: 1rem;
-      border-radius: 6px;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      min-height: 50px;
-      margin-top: 1rem;
-    }
-  </style>
+.brand {
+  font-size: 21px;
+  font-weight: 700;
+  padding: 12px;
+  margin-bottom: 22px;
+}
+
+.brand span { color: var(--accent); }
+
+.side-btn {
+  padding: 13px;
+  border-radius: 9px;
+  cursor: pointer;
+  color: var(--text);
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.side-btn:hover,
+.side-btn.active {
+  background: #303030;
+}
+
+.sidebar-info {
+  margin-top: auto;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+/* Main */
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.topbar {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 25px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+#status {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px 20px 160px;
+}
+
+.messages {
+  max-width: 800px;
+  margin: auto;
+}
+
+.welcome {
+  text-align: center;
+  margin-top: 17vh;
+}
+
+.welcome h1 {
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.welcome p {
+  color: var(--muted);
+}
+
+.message {
+  display: flex;
+  gap: 15px;
+  margin: 25px 0;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--panel);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 15px;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.user .content {
+  background: #303030;
+  padding: 12px 17px;
+  border-radius: 17px;
+  max-width: 85%;
+  margin-left: auto;
+}
+
+.user {
+  justify-content: flex-end;
+}
+
+.assistant .avatar {
+  background: var(--accent);
+  color: white;
+}
+
+.typing {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Composer */
+
+.composer-area {
+  position: absolute;
+  bottom: 0;
+  left: 260px;
+  right: 0;
+  padding: 20px;
+  background: linear-gradient(transparent, var(--bg) 25%);
+}
+
+.composer {
+  max-width: 800px;
+  margin: auto;
+  background: #303030;
+  border: 1px solid #444;
+  border-radius: 25px;
+  display: flex;
+  align-items: flex-end;
+  padding: 12px 14px;
+  gap: 10px;
+}
+
+textarea {
+  flex: 1;
+  resize: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  max-height: 180px;
+  min-height: 28px;
+  padding: 5px;
+}
+
+textarea::placeholder { color: #999; }
+
+.send {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  background: white;
+  color: black;
+  font-size: 20px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.send:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 12px;
+}
+
+@media(max-width:650px) {
+  .sidebar { display: none; }
+  .composer-area { left: 0; }
+  .topbar { padding: 0 15px; }
+  .chat { padding: 20px 14px 150px; }
+}
+</style>
 </head>
 
 <body>
-  <h2>Local WebGPU AI</h2>
 
-  <textarea id="prompt">Explain how WebGPU works in two simple sentences.</textarea>
+<aside class="sidebar">
+  <div class="brand">◉ Local<span>AI</span></div>
 
-  <br>
+  <div class="side-btn active" id="new-chat">＋ New chat</div>
+  <div class="side-btn">◷ History</div>
+  <div class="side-btn">⚡ Explore</div>
 
-  <button id="run-btn" disabled>Loading Model...</button>
+  <div class="sidebar-info">
+    <div><span class="dot"></span>Local AI</div>
+    <div id="model-status">Loading model...</div>
+    <div>WebGPU acceleration</div>
+    <div>Transformers.js</div>
+  </div>
+</aside>
 
-  <div id="status">Checking WebGPU support...</div>
+<main class="main">
 
-  <div id="output"></div>
+  <header class="topbar">
+    Local AI
+    <span id="status">Initializing...</span>
+  </header>
 
-  <script type="module">
-    import { pipeline } from
-      'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2';
+  <section class="chat" id="chat">
+    <div class="messages" id="messages">
 
-    const statusEl = document.getElementById('status');
-    const outputEl = document.getElementById('output');
-    const runBtn = document.getElementById('run-btn');
-    const promptEl = document.getElementById('prompt');
+      <div class="welcome" id="welcome">
+        <h1>What can I help with?</h1>
+        <p>Chat with AI running directly in your browser.</p>
+      </div>
 
-    let generator = null;
+    </div>
+  </section>
 
-    async function init() {
-      if (!navigator.gpu) {
-        statusEl.textContent =
-          'WebGPU is unavailable. Try a supported browser with WebGPU enabled.';
-        runBtn.textContent = 'WebGPU unavailable';
-        return;
-      }
+  <div class="composer-area">
+    <div class="composer">
+      <textarea id="prompt"
+        placeholder="Message Local AI..."
+        rows="1"></textarea>
+      <button class="send" id="send" disabled>↑</button>
+    </div>
+    <div class="footer">
+      Local inference · WebGPU · Transformers.js
+    </div>
+  </div>
 
-      try {
-        statusEl.textContent = 'Initializing WebGPU...';
+</main>
 
-        generator = await pipeline(
-          'text-generation',
-          'onnx-community/Qwen2.5-0.5B-Instruct',
-          {
-            device: 'webgpu',
-            dtype: 'q4',
-            progress_callback: (info) => {
-              if (info.status === 'progress') {
-                statusEl.textContent =
-                  `Downloading ${info.file}: ${Math.round(info.progress)}%`;
-              } else if (info.status === 'done') {
-                statusEl.textContent = `Loaded ${info.file}`;
-              }
-            }
+<script type="module">
+import { pipeline } from
+'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2';
+
+const status = document.getElementById('status');
+const modelStatus = document.getElementById('model-status');
+const messages = document.getElementById('messages');
+const chat = document.getElementById('chat');
+const prompt = document.getElementById('prompt');
+const send = document.getElementById('send');
+const welcome = document.getElementById('welcome');
+
+let generator = null;
+let history = [];
+let busy = false;
+
+function addMessage(role, text) {
+  welcome?.remove();
+
+  const message = document.createElement('div');
+  message.className = `message ${role}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = role === 'user' ? 'U' : '✳';
+
+  const content = document.createElement('div');
+  content.className = 'content';
+  content.textContent = text;
+
+  message.appendChild(avatar);
+  message.appendChild(content);
+  messages.appendChild(message);
+
+  chat.scrollTop = chat.scrollHeight;
+
+  return content;
+}
+
+async function initialize() {
+  if (!navigator.gpu) {
+    status.textContent = 'WebGPU unavailable';
+    modelStatus.textContent = 'WebGPU not supported';
+    return;
+  }
+
+  try {
+    status.textContent = 'Loading model...';
+    modelStatus.textContent = 'Downloading model...';
+
+    generator = await pipeline(
+      'text-generation',
+      'onnx-community/Qwen2.5-0.5B-Instruct',
+      {
+        device: 'webgpu',
+        dtype: 'q4',
+        progress_callback: info => {
+          if (info.status === 'progress') {
+            const progress = Math.round(info.progress);
+            status.textContent = `Downloading: ${progress}%`;
+            modelStatus.textContent = `Downloading: ${progress}%`;
           }
-        );
-
-        statusEl.textContent = 'Model ready! Running locally on your GPU.';
-        runBtn.textContent = 'Generate';
-        runBtn.disabled = false;
-
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = 'Failed to load model: ' + err.message;
-        runBtn.textContent = 'Loading failed';
+        }
       }
-    }
+    );
 
-    runBtn.addEventListener('click', async () => {
-      if (!generator) return;
+    status.textContent = 'Ready';
+    modelStatus.textContent = 'Model ready';
+    send.disabled = false;
 
-      runBtn.disabled = true;
-      statusEl.textContent = 'Generating...';
-      outputEl.textContent = '';
+  } catch (error) {
+    console.error(error);
+    status.textContent = 'Model failed';
+    modelStatus.textContent = error.message;
+  }
+}
 
-      try {
-        const messages = [
-          {
-            role: 'user',
-            content: promptEl.value
-          }
-        ];
+async function chatWithAI() {
+  const text = prompt.value.trim();
 
-        const result = await generator(messages, {
-          max_new_tokens: 150,
-          temperature: 0.7,
-          do_sample: true
-        });
+  if (!text || !generator || busy) return;
 
-        const generated = result[0].generated_text;
+  busy = true;
+  send.disabled = true;
 
-        const reply = Array.isArray(generated)
-          ? generated[generated.length - 1].content
-          : generated;
+  addMessage('user', text);
+  prompt.value = '';
+  prompt.style.height = 'auto';
 
-        outputEl.textContent = reply;
-        statusEl.textContent = 'Done!';
+  history.push({
+    role: 'user',
+    content: text
+  });
 
-      } catch (err) {
-        console.error(err);
-        statusEl.textContent = 'Generation error: ' + err.message;
-      } finally {
-        runBtn.disabled = false;
-      }
+  const responseElement = addMessage('assistant', 'Thinking...');
+  responseElement.classList.add('typing');
+
+  try {
+    const result = await generator(history, {
+      max_new_tokens: 256,
+      temperature: 0.7,
+      do_sample: true
     });
 
-    init();
-  </script>
+    const generated = result[0].generated_text;
+
+    const answer = Array.isArray(generated)
+      ? generated[generated.length - 1].content
+      : generated;
+
+    responseElement.classList.remove('typing');
+    responseElement.textContent = answer;
+
+    history = Array.isArray(generated)
+      ? generated
+      : [
+          ...history,
+          { role: 'assistant', content: answer }
+        ];
+
+    status.textContent = 'Ready';
+
+  } catch (error) {
+    console.error(error);
+    responseElement.classList.remove('typing');
+    responseElement.textContent = 'Error: ' + error.message;
+    status.textContent = 'Generation error';
+  }
+
+  busy = false;
+  send.disabled = false;
+  chat.scrollTop = chat.scrollHeight;
+}
+
+send.addEventListener('click', chatWithAI);
+
+prompt.addEventListener('keydown', event => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    chatWithAI();
+  }
+});
+
+prompt.addEventListener('input', () => {
+  prompt.style.height = 'auto';
+  prompt.style.height = Math.min(prompt.scrollHeight, 180) + 'px';
+});
+
+document.getElementById('new-chat').addEventListener('click', () => {
+  history = [];
+  messages.innerHTML = `
+    <div class="welcome" id="welcome">
+      <h1>What can I help with?</h1>
+      <p>Chat with AI running directly in your browser.</p>
+    </div>
+  `;
+});
+
+initialize();
+</script>
+
 </body>
 </html>
